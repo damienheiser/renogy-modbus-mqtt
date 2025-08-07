@@ -5,6 +5,7 @@ go 1.20
 require (
 	github.com/eclipse/paho.mqtt.golang v1.4.3
 	github.com/go-redis/redis/v8 v8.11.5
+	github.com/godbus/dbus/v5 v5.1.0
 	github.com/gorilla/mux v1.8.0
 	github.com/knadh/koanf/providers/env v0.1.0
 	github.com/knadh/koanf/v2 v2.0.1

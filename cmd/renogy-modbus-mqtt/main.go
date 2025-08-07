@@ -8,6 +8,7 @@ import (
 	"github.com/gorilla/mux"
 	gorenogymodbus "github.com/michaelpeterswa/go-renogy-modbus"
 	"github.com/michaelpeterswa/renogy-modbus-mqtt/internal/config"
+	"github.com/michaelpeterswa/renogy-modbus-mqtt/internal/dbus"
 	"github.com/michaelpeterswa/renogy-modbus-mqtt/internal/handlers"
 	"github.com/michaelpeterswa/renogy-modbus-mqtt/internal/logging"
 	"github.com/michaelpeterswa/renogy-modbus-mqtt/internal/mqtt"
@@ -24,6 +25,7 @@ func main() {
 		mqttClient   *mqtt.MQTTClient
 		modbusClient *gorenogymodbus.ModbusClient
 		redisClient  *redis.RedisClient
+		dbusClient   *dbus.Client
 
 		puller pull.Puller
 		pusher push.Pusher
@@ -51,6 +53,17 @@ func main() {
 		mqttClient, err = mqtt.InitMQTT(mqttConfig)
 		if err != nil {
 			logger.Fatal("could not init mqtt client", zap.Error(err))
+		}
+	}
+
+	if k.String(config.PushMode) == "dbus" {
+		service := k.String(config.DBusServiceName)
+		if service == "" {
+			service = "com.victronenergy.solarcharger.renogy"
+		}
+		dbusClient, err = dbus.NewClient(service)
+		if err != nil {
+			logger.Fatal("could not init dbus client", zap.Error(err))
 		}
 	}
 
@@ -98,7 +111,14 @@ func main() {
 		logger.Error("could not add cron job", zap.Error(err))
 	}
 
-	pusher = push.NewMQTTPusher(mqttClient, k.String(config.MQTTTopic), dciChan)
+	switch k.String(config.PushMode) {
+	case "mqtt":
+		pusher = push.NewMQTTPusher(mqttClient, k.String(config.MQTTTopic), dciChan)
+	case "dbus":
+		pusher = push.NewDBUSPusher(dbusClient, dciChan)
+	default:
+		logger.Fatal("invalid push mode", zap.String("mode", k.String(config.PushMode)))
+	}
 
 	go func() {
 		err := pusher.Push()
