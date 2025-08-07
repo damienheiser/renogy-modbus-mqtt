@@ -29,6 +29,8 @@ const (
 	PullCron = "pull.cron"
 
 	RedisQueueName = "redis.queue.name"
+
+	DBusServiceName = "dbus.service.name"
 )
 
 func Get() (*koanf.Koanf, error) {
